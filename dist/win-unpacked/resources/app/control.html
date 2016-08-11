@@ -1,0 +1,228 @@
+﻿<!doctype html>
+
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+
+  <title>VR to Dome - Control</title>
+  <style>
+    body 		{ margin: 0; 
+						  background-color: rgb(0,0,0);
+						  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+						}
+
+	            #guiContainer{
+	            	position: absolute;
+	            	top: 0;
+	            	left: 0;
+	            	width: 100%;
+	            	height:100%;
+	            }
+  </style>
+
+
+</head>
+
+<body>
+
+<div id="guiContainer">
+	<div>
+
+</body>
+
+
+
+<script type='text/javascript' src="js/DAT.GUIcustom.js"></script>
+
+<script>
+		   const electron = require('electron');
+		   const remote   = electron.remote
+           const dialog   = remote.require('electron').dialog;
+           const fs = require('fs');
+
+			g_currentResolution = "2k";
+			g_SourcePath = "None"
+			g_SourceName = "None"
+
+
+</script>
+
+<script>
+
+
+
+  			const {ipcRenderer} = require('electron')
+
+
+           ipcRenderer.on('from-Controls', (event, arg) => {
+
+					  if(arg[0] == 'v_currentResolution'){
+					  	params.Dome_Resolution = arg[1];
+					  }else if(arg[0] == 'v_Video_Progess'){
+					  	params.Video_Progress = arg[1];
+					  } else if(arg[0] == 'v_Path'){
+					  	params.Source_Path = arg[1];
+					  } else if(arg[0] == 'v_Name'){
+					  	params.Source_Name = arg[1];
+					  }else if(arg[0] == 'v_Clear_Dome'){
+					      params.Show_Test_Image = false;
+					  } 
+
+			   })
+
+  			var gui = new dat.GUI({
+  				autoplace: false,
+			    width : document.getElementById('guiContainer').innerWidth
+
+			});
+
+			document.getElementById('guiContainer').appendChild(gui.domElement);
+
+
+	
+			var v_FOV 					 = 180.0;
+			var v_Roll 					 = 0.0;
+			var v_Tilt_X 				  = -10.0;
+			var v_Tilt_Y 				  = 0.0;
+			var v_Guide_Opacity 		  = 50.0;
+			var v_Back_Dimming_Strength   = 0.0;
+			var v_Back_Dimming_Coverage   = 50.0;
+			var v_Repetitions             = 1.0;
+			var v_Panorama_Height         =1.0;
+			var v_Panorama_Position       = 0.0
+			var v_Video_Progess			  = 0.0
+
+		
+			var paramsf = function(){
+			     
+			     this.FOV = v_FOV;
+			     this.Roll = v_Roll;
+			     this.Panorama_Height = v_Panorama_Height;
+			     this.Panorama_Position = v_Panorama_Position
+			     this.Panorama_Repetitions = v_Repetitions 
+			     this.Tilt = v_Tilt_X;
+			     this.Guide_On = false;
+			     this.Guide_Opacity = v_Guide_Opacity;
+			     this.Back_Dimming_Strength = v_Back_Dimming_Strength;
+			     this.Back_Dimming_Coverage = v_Back_Dimming_Coverage;
+			     this.Video_Play = true;
+			     this.Video_Mute = false;
+			     this.Constrain_Aspect_Ratio = true;
+			     this.View_Source = false;
+			     this.Dome_Resolution = g_currentResolution;
+			     this.Source_Path  = g_SourcePath;
+			     this.Source_Name   = g_SourceName;
+			     this.Load_File = function(){openLoadFileDialog()};
+			     this.Video_Progress = v_Video_Progess	
+			     this.Video_Loop = true;
+			     this.Show_Test_Image = true;
+			     this.Clear_Dome = function(){clearStage()};
+
+
+			};
+
+	
+			params = new paramsf;
+
+	
+			var f5 = gui.addFolder('Window')
+			f5.add(params , 'Constrain_Aspect_Ratio').onChange(function(value) {transmit(['v_Constrain_Aspect_Ratio', value])});
+			var f6 = gui.addFolder('Source')
+			f6.add(params, 'Load_File').onChange(function(value) {transmit(['v_Load_File', value])});
+			f6.add(params , 'Source_Name').listen();
+			f6.add(params , 'Source_Path').listen();
+			f6.add(params , 'Dome_Resolution').listen();
+			f6.add(params , 'View_Source').onChange(function(value) {transmit(['v_View_Source', value])});
+			f6.add(params , 'Clear_Dome');
+			var f1 = gui.addFolder('Projection')
+			f1.add(params , 'FOV', 10, 360).onChange(function(value) {transmit(['v_FOV', value])});
+			f1.add(params , 'Tilt', -180, 180).onChange(function(value) {transmit(['v_Tilt', value])});
+			f1.add(params , 'Roll', -180, 180).onChange(function(value) {transmit(['v_Roll', value])});
+			var f7 = gui.addFolder('Panorama');
+			f7.add(params , 'Panorama_Height', 0, 2).onChange(function(value) {transmit(['v_Panorama_Height', value])});
+			f7.add(params , 'Panorama_Position', 0, 100).onChange(function(value) {transmit(['v_Panorama_Position', value])});
+			f7.add(params , 'Panorama_Repetitions', 1, 12).step(1).onChange(function(value) {transmit(['v_Repetitions', value])});
+			var f2 = gui.addFolder('Guides');
+			f2.add(params , 'Guide_On').onChange(function(value) {transmit(['v_Guide_On', value])});
+			f2.add(params , 'Guide_Opacity', -100, 100).onChange(function(value) {transmit(['v_Guide_Opacity', value])});
+			var f3 = gui.addFolder('Back Dimming')
+			f3.add(params , 'Back_Dimming_Strength', 0, 100).onChange(function(value) {transmit(['v_Back_Dimming_Strength', value])});
+			f3.add(params , 'Back_Dimming_Coverage', 0, 100).onChange(function(value) {transmit(['v_Back_Dimming_Coverage', value])});
+			var f4 = gui.addFolder('Video Controls');
+			f4.add(params , 'Video_Play').onChange(function(value) {transmit(['v_Video_Play', value])});
+			f4.add(params , 'Video_Mute').onChange(function(value) {transmit(['v_Video_Mute', value])});
+			f4.add(params , 'Video_Loop').onChange(function(value) {transmit(['v_Video_Loop', value])});
+			f4.add(params , 'Video_Progress', 0, 100).listen().onChange(function(value) {transmit(['v_Video_Progress', value])});
+			var f7 = gui.addFolder('Utilities')
+			f7.add(params , 'Show_Test_Image').onChange(function(value) {transmit(['v_Show_Test_Image', value])}).listen();
+
+
+
+			f1.open();
+			f2.open();
+			f6.open();
+			
+
+
+
+		function transmit(message){
+			 ipcRenderer.send('to-Player', message)
+		}
+
+		function clearStage(){
+
+		    transmit(['v_Clear_Stage', 'clearCanvas()']);
+
+		}
+        
+
+        function openLoadFileDialog(){
+
+           			//document.getElementById('loadIndicator').setAttribute("style","width:100%");
+
+	                dialog.showOpenDialog({
+									  filters: [
+									    {name: 'Images', extensions: ['jpg', 'png', 'tif']},
+									    {name: 'Movies', extensions: ['mkv', 'mov', 'mp4']},	   
+									  ],
+									   properties: [
+									   	 'openFile'
+									   ]
+									}          
+										,function (fileNames) {
+							                    if(fileNames === undefined){
+							                        console.log("No file selected");
+							                    }else{
+							                    	console.log(fileNames[0]);
+							                    	transmit(['v_FileName', fileNames[0]]);
+
+							                    	/*
+							                        g_Source = new Source(fileNames[0]); 
+							                        params.Source_Path = g_Source.name;
+							                        loadSource(g_Source);
+
+							                        if(g_Source.type == 'video'){
+							                        	loadVideo(g_Source.completePath);
+							                    	}else if(g_Source.type == 'image'){
+							                    		loadStill(g_Source.completePath)
+							                    	}
+													*/
+
+
+
+
+							                    }
+	                }); 
+            };
+
+
+		</script>
+		<script>
+
+
+
+		  function recieveValues(){
+
+		  }
+		</script>
+</html>

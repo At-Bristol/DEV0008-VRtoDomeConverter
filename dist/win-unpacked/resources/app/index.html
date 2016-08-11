@@ -1,0 +1,1093 @@
+﻿<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset=utf-8>
+		<title>VR to Dome - Viewer</title>
+		<style>
+			body 		{ margin: 0; 
+						  background-color: rgb(0, 0, 0);
+						  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+                          padding:0;
+						}
+			canvas 		{ width: 100%; height: 90%; z-index: 5;  }
+
+			#header 	{ width: 100%;
+						  height:66px;
+						  position: absolute;
+						  background-color: rgba(0,0,0,0.3);
+						  z-index: 100;
+						  margin: 0;
+						  border-bottom: thin solid white;
+						  padding: 0px;
+						}
+
+			#header p 	{
+							color: white;
+						}
+
+			#tutorial	{
+							position: absolute;
+						    top: 0px;
+						    left: 0px;
+						    margin: 0 0 0 0;
+						    width: 100%;
+						    height: 100%;
+						    background-color: rgba(0,0,0,0.5);
+						    color: white;
+						    z-index: 100;
+						    padding-top: 30%;
+						    margin-left: auto;
+							margin-right: auto;
+							margin-top: auto;
+							margin-bottom: auto;
+							text-align: center;
+							
+
+						}
+
+			#tutorial h1 {
+							size: 144pt;
+							margin-left: auto;
+							margin-right: auto;
+							margin-top: auto;
+							margin-bottom: auto;
+							text-align: center;
+							
+
+
+						}
+
+			#tutorial h2 {
+							size: 72pt;
+							margin-left: auto;
+							margin-right: auto;
+							margin-top: auto;
+							margin-bottom: auto;
+							text-align: center;
+						}
+
+			#tutorial p {
+							size: 36pt;
+							margin-left: auto;
+							margin-right: auto;
+							margin-top: auto;
+							margin-bottom: auto;
+							text-align: center;
+							
+							
+
+
+						}
+
+
+			#tutorial a {
+							size: 56pt;
+							margin-left: auto;
+							margin-right: auto;
+							margin-top: auto;
+							margin-bottom: auto;
+							text-align: center;
+							color: cyan;
+							text-decoration: underline;
+
+						}
+
+
+
+
+
+
+			#videoPlayer 	{
+							position: absolute;
+						    top: 0px;
+						    left: 0px;
+						    margin: 0 0 0 0;
+						}
+
+			#controlsContainer{
+
+							position: absolute;
+							height:12px;
+							width:100%;
+							bottom: 0px;
+						    left: 0px;
+						    margin: 0 0 0 0;
+
+						 }
+
+			#loadIndicatorContainer{
+
+						 height: 2px;
+						 width: 100%;
+						 top:0;
+						 left:0;
+						 position: relative;
+
+
+						}
+
+			#loadIndicator{
+
+						 background-color: green;
+						 height: 100%;
+						 width: 0%;
+						 top:0;
+						 left:0;
+						 margin: 0 0 0 0;
+
+						}
+
+			#transportControls 	{
+							
+							width:100%;
+							background-color: rgba(0,0,0,0.5); 
+						    margin: 0 0 0 0;
+						    border-top: solid 1px rgb(100,100,100)
+						}
+
+			#transportControls #indicator{
+							position: absolute;
+							height: 100%;
+							width:3px;
+							background-color: yellow;
+						    bottom: 0px;
+						    left: 0px;
+						    margin: 0 0 0 0;
+						}
+
+
+			#loadControls 	{
+							position: absolute;
+							height: 50px;
+							width:100%;
+						    top: 0px;
+						    left: 0px;
+						    margin: 0 0 0 0;
+						}
+
+			#sourceCanvas 	{
+							position: absolute;
+							z-index:1000;
+						}
+
+
+			#loadControls #loadedFileName	{
+							color:white;
+						}
+
+			#playerContent {
+
+							padding:0;
+                            margin:0;
+                         
+					}
+            #sourceCanvas{
+                position:absolute;
+                top:0;
+                left:0;
+                height:100%;
+                width:100%;
+            }
+
+
+		</style>
+	</head>
+	<body>
+
+		
+			    <canvas id="sourceCanvas" width="4096" height="2048" style= "display: none"  ></canvas>
+		
+			     <div id="playerContent">
+
+
+			     </div>
+
+			    <video id="videoPlayer" autoplay loop style= "display: none">         
+				
+					
+				
+			     </video>
+
+        
+
+		<script type='text/javascript' src="js\three.js"></script>
+		<script type='text/javascript' src="js\DAT.GUI.js"></script>
+		<script type='text/javascript' src="js\VideoFrame.min.js"></script>
+		<script type='text/javascript' src="js\stats.min.js"></script>
+		<script>
+
+		//electron include
+
+		   const {ipcRenderer} = require('electron')
+		   const electron = require('electron');
+	       const remote   = electron.remote
+	       const dialog   = remote.require('electron').dialog;
+	       const fs = require('fs');
+	    
+
+
+		</script>
+
+		<script>
+
+		//Globals
+
+        	var g_SourcePath = "No video loaded"
+        	var g_currentResolution = "none";
+        	var g_flexible_window = true;
+
+			var g_imageSeq = [];
+			var g_loadedImgSequence = [];
+
+			var g_img;
+
+		    var g_windowWidth;
+			var g_windowHeight;
+			var g_domiantDimension;
+			var g_camera;
+			var g_renderPlaneGeo;
+			var g_renderPlane;
+			var g_renderer;
+			var g_scene;
+			var g_Source = false;
+
+			var g_typeLoaded = 'none';
+
+			var g_constrainAspectRatio = true;
+
+				//
+
+
+			var v_FOV 							= 180.0;
+			var v_Roll							= 0.0;
+			var v_Tilt 							= -10.0;
+			var v_Guide_Opacity 				= 50.0;
+			var v_Back_Dimming_Strength			= 0.0;
+			var v_Back_Dimming_Coverage 		= 50.0;
+			var v_Repetitions            		= 1.0;
+			var v_Panorama_Height         		= 1.0;
+			var v_Panorama_Position       		= 0.0;
+			var v_Guide_On 				  		= 0.0;
+
+
+
+
+		</script>
+		<script>
+
+		// Source
+		
+		var Source = function(filepath){
+
+				this.completePath = filepath;
+
+
+
+		 		var imageSeqCounterLength = 0;
+			    var name        =  filepath.substr(filepath.lastIndexOf('\\') + 1);
+
+			   	name 			=  name.substring(0, name.lastIndexOf('.') );
+
+			   	//name
+
+			   	this.name 		= 		name;
+
+			   	//path to file 
+
+			   	this.path        = filepath.substr(0, filepath.length - ( filepath.length - filepath.lastIndexOf("\\") -1 ) ); 
+
+			   	//extention
+
+			   	this.extension   = filepath.substr(- ( filepath.length - (filepath.lastIndexOf('.') + 1) ) );
+
+			   	this.seqid = false; 
+
+			   	this.type  = 'not recognised';
+
+			   	if (this.extension == 'jpg'){
+					this.type = 'image'
+
+				}else if(this.extension == 'png'){
+					this.type = 'image'
+
+
+				}else if(this.extension == 'bmp'){
+					this.type = 'image'
+
+
+				}else if(this.extension == 'mp4'){
+
+					this.type = 'video'
+
+
+				}else if(this.extension == 'mov'){
+
+					this.type = 'video'
+
+
+				}else if(this.extension == 'mkv'){
+
+					this.type = 'video'
+
+
+				}else if(this.extension == 'ogg'){
+
+					this.type = 'video'
+
+
+				}else{
+
+					console.log('File type not recognised');
+					return false;
+				}
+
+
+				if(this.type == 'image'){
+
+			  	    imageSeqCounterLength = determineImageSequenceCounterLength(name);
+
+		  	    }
+
+		  	    this.seqCounterLength = imageSeqCounterLength;
+
+		  	    if(imageSeqCounterLength > 0){
+
+		  	    	//seqid - if image sequence this contains image sequence header without the incrementing values
+
+		  	         this.seqid = name.substr( 0, name.length - (imageSeqCounterLength) ) 
+
+		  	    }
+
+
+		  		function determineImageSequenceCounterLength(imgName){
+
+				   		l=0;
+
+				   	    while(l<imgName.length){
+				   	    	currentChar =  imgName.charAt( imgName.length - (l + 1) ) ;
+				   	    	if( !parseInt(currentChar) && currentChar != 0 ){
+				   	    		return(l);
+				   	    		break
+				   	    	};
+				   	        l++;
+				   	    };
+					};
+				};
+
+		</script>
+
+		<script>
+
+		//Image Sequence	
+
+        var ImageSeq = function(source, callback){
+
+        		this.path = source.path;
+
+        		this.content = 'none';
+
+            	
+            	formImageSeq(source);
+
+		           
+		        function formImageSeq(source){
+
+		           		dirpath = source.path;
+
+		           		console.log("loading from " + dirpath)
+
+		           		fs.readdir(dirpath, function(err,filesArray){
+		           			filesArray = filesArray.sort();
+		           			for(f in filesArray){
+		           				fname = filesArray[f].substr( 0, filesArray[f].length - ((source.seqCounterLength + 1) + source.extension.length) )  ;
+
+		           				//console.log(fname + ' , '  + source.seqid)	
+
+		           				if ( fname !== source.seqid){
+		           					filesArray.splice(filesArray[f],1)
+		           					
+		           					}	
+		           				
+		           				};
+
+		           				
+		           				this.content = filesArray;
+		           				callback(filesArray);
+		           				
+		           			});
+	           		};
+
+	           	};	
+	           	
+
+	    function loadImageSeq(imgSeq, callback){
+
+	     	imageSeqMem = [];
+
+	     	console.log('loadImageSeq');
+
+	     	for(i=0; i < (imgSeq.content.length); i++){
+	     		if(imgSeq.content[i]){
+	     			imgPath = imgSeq.path + imgSeq.content[i];
+	    
+	     			img = new Image();
+	     			img.src = imgPath; 
+	     			imageSeqMem.push(img);
+	  			};
+	     	}
+
+	    	callback(imageSeqMem);
+
+	     }
+
+
+		</script>
+		<script>
+
+		//stats window 
+
+			var stats = new Stats();
+			stats.showPanel( 0 ); // 0: fps, 1: ms, 2: mb, 3+: custom
+			document.body.appendChild( stats.dom );
+
+		</script>
+
+		 <script>
+
+              
+           function openLoadFileDialog(){
+
+           			document.getElementById('loadIndicator').setAttribute("style","width:100%");
+
+	                dialog.showOpenDialog({
+									  filters: [
+									    {name: 'Files', extensions: ['jpg', 'png', 'tif','mkv', 'mov', 'mp4']},
+									   	   
+									  ],
+									   properties: [
+									   	 'openFile'
+									   ]
+									}          
+										,function (fileNames) {
+							                    if(fileNames === undefined){
+							                        console.log("No file selected");
+							                    }else{
+							                        g_Source = new Source(fileNames[0]); 
+							                        //params.Source_Path = g_Source.name;
+							                        loadSource(g_Source);
+
+							                        if(g_Source.type == 'video'){
+							                        	loadVideo(g_Source.completePath);
+							                    	}else if(g_Source.type == 'image'){
+							                    		loadStill(g_Source.completePath)
+							                    	}
+
+							                    }
+	                }); 
+            };
+
+
+           function loadSource(source){
+
+            	console.log("path = " + source.path);
+            	console.log("name = " + source.name);
+            	console.log("extention = " + source.extension)
+            	console.log("type = " + source.type)
+
+            	//for future image sequence loading
+            	
+
+                /*if(source.seqid){
+                	dialog.showMessageBox({ message: "Is this an image sequence?",
+      				buttons: ["Yes","No"], type: "question" },function(response){
+      					if(response == 0){
+      							g_imageSeq  = new ImageSeq(source, function(res){
+      								g_imageSeq.content = res;
+      								loadImageSeq(g_imageSeq, function(res){   g_loadedImgSequence = res  });
+      							});
+      							
+      					}else{
+      						
+      							console.log('Dont Load Image Seq')
+
+      					}
+
+      				});
+
+                };*/
+
+                return source
+            };
+            		
+
+        </script>
+
+
+        <script>
+
+
+        //Control Panel communication
+
+
+        function transmit(message){
+			 ipcRenderer.send('to_Controls', message)
+		}
+
+	
+
+        ipcRenderer.on('from-Player', (event, arg) => {
+
+
+       
+			  if(arg[0] == 'v_FileName'){
+
+				  	g_Source = new Source(arg[1]); 
+					loadSource(g_Source);
+	                if(g_Source.type == 'video'){
+	                	loadVideo(g_Source.completePath);
+	            	}else if(g_Source.type == 'image'){
+	            		loadStill(g_Source.completePath)
+	            	}
+	          }else if(arg[0] == "v_Video_Play"){
+
+	          		if(v){
+	        			videoPlayPause(v,arg[1]);
+	        		}
+
+	          }else if(arg[0] == "v_Video_Loop"){
+
+	          		if(v){
+	          			
+	        			v.loop = arg[1];
+	        		}
+
+
+	          }else if(arg[0] == "v_Video_Mute"){;
+
+	          		if(v){
+	        			videoMuteUnMute(v,arg[1]);
+	        		}
+
+	          }else if(arg[0] == "v_Video_Progress"){;
+
+	          		if(v){
+
+	          			t = { frame:  arg[1] * v.duration  }
+	        			videoInfo.seekTo(t);
+	        		}
+
+
+	          }else if(arg[0] == "v_View_Source"){
+
+	        			if(arg[1]){
+	        				document.getElementById('sourceCanvas').setAttribute("style","display:initial");
+	        			}else{
+	        				document.getElementById('sourceCanvas').setAttribute("style","display:none");
+	        			};
+
+	          }else if(arg[0] == "v_Constrain_Aspect_Ratio"){
+
+	 
+	        		 g_constrainAspectRatio = arg[1];
+	        		 initWindow();
+	        		
+	          }else if(arg[0] == "v_Guide_On"){
+	          		if(arg[1]){
+	          		 	v_Guide_On = 1.0;
+	          		 }else{
+	          		 	v_Guide_On = 0.0;
+	          		 }
+
+			  }else if(arg[0] == "v_Repetitions"){
+
+	        		 eval(arg[0]+ '=' + arg[1]);
+	        		 if(arg[1]>1){
+	        		 	setCanvasResolution(2048);
+	        		 }else{
+	        		 	setCanvasResolution(g_img.clientWidth);
+	        		 }
+	        		
+			  }else if(arg[0] == "v_Show_Test_Image"){
+
+			      console.log('showTestImage');
+
+			      if(arg[1]){
+			          loadStill('assets\\img\\earth.jpg')
+			      }else{
+			          clearCanvas();
+			      }
+			  
+			  
+			  }else if(arg[0] == "v_Clear_Stage"){
+
+			      eval(arg[1]);
+			  
+			  } else{
+			      eval(arg[0]+ '=' + arg[1]);
+			  }
+	
+			});
+		</script>
+		<script>
+
+			var v = document.getElementById('videoPlayer');
+			var vSource = document.createElement('source');
+			v.appendChild(vSource);
+
+			var canvas = document.getElementById('sourceCanvas'),
+
+			context = canvas.getContext('2d');
+
+			context.fillRect(0, 0, canvas.height, canvas.width)
+
+			function loadVideo(path){
+
+				v.pause();
+
+				context.clearRect(0, 0, canvas.width, canvas.height);
+
+				vSource.setAttribute('src', path );
+				v.load()
+				v.play()
+
+				g_typeLoaded = 'video'
+
+				v.muted=false;
+			    if(g_Source.path){
+					transmit(['v_Path',g_Source.path]);
+					transmit(['v_Name',g_Source.name]);
+					console.log(g_Source.name)
+				}
+			}
+
+			
+			function loadStill(path){
+				console.log("loadStill")
+				v.pause()
+				context.clearRect(0, 0, canvas.width, canvas.height);
+				g_typeLoaded = 'image';
+				g_img = new Image();
+				g_img.src = path;
+				g_img.onload = function(){
+					drawImageFrameInCanvas(g_img);
+					setCanvasResolution(g_img.clientWidth);
+					
+				}
+				if(g_Source.path){
+					transmit(['v_Path',g_Source.path]);
+					transmit(['v_Name',g_Source.name]);
+					console.log(g_Source.name)
+				}
+			}
+
+			function drawImageFrameInCanvas(img){
+				context.clearRect(0, 0, canvas.width, canvas.height);
+				context.drawImage(img, 0, canvas.height * (v_Panorama_Position/100), canvas.width  ,canvas.height * v_Panorama_Height);
+				
+			}
+
+			function drawVideoFrameInCanvas(video,context) {
+				if(video.paused || video.ended) return false;
+				    context.clearRect(0, 0, canvas.width, canvas.height);
+				    context.drawImage(video,0, canvas.height * (v_Panorama_Position/100), canvas.width  ,canvas.height * v_Panorama_Height);
+				  
+				};
+				
+			function videoPlayPause(video, play){
+				if(play){
+					video.play();
+				}else{
+					video.pause();
+				}
+			}
+
+		    function videoMuteUnMute(video, mute){
+			    if(mute){
+					 video.muted='muted';
+				}else{
+				    
+				    video.muted = false;
+				}		
+		    }
+
+		    function clearCanvas(){
+		        if(context){
+          
+		            loadStill('assets\\img\\blank.png')
+		            transmit(["v_Clear_Dome","false"]);
+		        }
+		    }
+
+
+			
+			//play on Space
+			document.onkeyup = function(evt){
+				if (evt.keyCode == 32) {
+		    	  videoPlayPause(v);
+		   	 }
+			}
+
+			v.addEventListener('loadedmetadata', function() {
+			   console.log(v.videoWidth);
+			   canvas.width = 4096;
+			   canvas.height = 2048;
+
+
+			 setCanvasResolution (v.videoWidth);
+			   
+
+			   console.log(g_currentResolution);
+
+			   //params.Dome_Video_Resolution = g_currentResolution;
+
+			}, false);
+
+			//videoFrames for frame info
+
+			var videoInfo = VideoFrame({
+			    id : 'videoPlayer',
+			    frameRate: FrameRates.web,
+			    callback : function(response) {
+			        console.log('callback response: ' + response);
+			    }
+			});			
+
+
+			function updateTransportIndicator(frame){
+				indicator = document.getElementById('indicator');
+
+			   var indicatorDivider =   (v.duration*30)/document.getElementById('transportControls').clientWidth;
+			   indicator.style.left = frame/indicatorDivider + 'px';
+
+			}
+
+
+			function setCanvasResolution(width){
+
+
+			     if (width < 2048){
+				   	   canvas.width = 2048;
+					   canvas.height = 1024;
+					   g_currentResolution = '1k';
+					   transmit(['v_currentResolution',g_currentResolution]);
+					
+				   } else if(width >= 4096) {
+				   	   canvas.width = 8192;
+					   canvas.height = 4096;
+					   g_currentResolution = '4k';
+					   transmit(['v_currentResolution',g_currentResolution]);
+					
+				   } else{
+				   		canvas.width = 4096;
+				  		canvas.height = 2048;
+				  		g_currentResolution = '2k';
+				  		transmit(['v_currentResolution',g_currentResolution]);
+					
+				   }
+
+			}
+
+			loadStill('assets\\img\\earth.jpg')
+
+
+			
+
+		</script>
+
+		<script type="x-shader/x-vertex" id="vertexShader"> 
+			
+				varying vec2 vTextureCoord;
+
+				void main() {
+		
+				    vTextureCoord = uv;
+				    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0 );
+				}
+
+		</script>
+
+		<script type="x-shader/x-fragment" id="fragmentShader"> 
+
+		  #ifdef GL_ES
+		  precision highp float;
+		  #endif
+
+		  #define PI 3.1415926535897931
+		  #define PI2 6.2831853071795862
+					
+			varying vec2 vTextureCoord;
+			uniform float u_FOV;
+			uniform float u_Roll;
+			uniform sampler2D tEqui;
+			uniform sampler2D tGuides;
+			uniform sampler2D tFish;
+			uniform float u_phi1;
+  			uniform float u_lambda0;
+  			uniform float u_GuideOn;
+  			uniform float u_GuideOpacity;
+  			uniform float u_Repetitions;
+
+  			uniform float u_bmSpread ;
+  			uniform float u_bmStrength; 
+			
+			void main() {
+            
+				float guideOpacity  = u_GuideOpacity/100.00;
+
+				//Thanks to http://www.rogerandwendy.com/roger/azeq/index.html for shader
+
+			    // We want a map that goes all around the earth
+			    // 0,1 -> -pi,pi
+
+			    
+
+			    float repetitions   = 	u_Repetitions;
+			    float angleOfView 	= 	u_FOV/360.0;
+				//float roll 			=   u_Roll/360.0;
+				float phi1       	=   ((u_phi1 +90.0 )* PI)/180.0;
+				float lambda0       =   (u_lambda0 * PI )/180.0;
+
+			    float x = PI2*(vTextureCoord.s - 0.5) * angleOfView ;
+			    float y = PI2*(vTextureCoord.t - 0.5 ) * angleOfView ;
+
+			    // from http://mathworld.wolfram.com/AzimuthalEquidistantProjection.html   
+
+			    float c = sqrt(x*x + y*y);
+			    float phi = asin( cos(c)*sin(phi1) + y*sin(c)*cos(phi1)/c );
+			    float lambda = lambda0 + atan( x*sin(c), (c*cos(phi1)*cos(c) - y*sin(phi1)*sin(c)));
+
+			    // Here we want longitude to wrap all around: -pi,pi -> 0,1
+			    // But latitude works slightly different: -pi/2,pi/2 -> 0,1
+
+			    vec2 tc = vec2((lambda /(PI*(2.0 / repetitions))) + 0.5, (phi/(PI)) + 0.5);
+
+			   float maskRadius	= 	PI*-angleOfView;
+				float circle        =   pow(x  , 2.0) + pow(y  , 2.0) - pow(maskRadius , 2.0) ;
+				float vingette      =   clamp(circle,0.0,0.001) * 1000.0;
+
+			    vec4 texSample      = 	texture2D(tEqui, tc);
+			    vec4 guidesSample   = 	texture2D(tGuides, vTextureCoord);
+
+			    float bmSpread        = pow(vTextureCoord.t * ((u_bmSpread/100.0)*3.0),1.5) * (u_bmStrength/100.0);
+
+
+			    vec4 guides        =   ((((guidesSample * -1.0) +1.0) * guideOpacity) *  u_GuideOn);
+			    vec4 backMask      =   vec4(bmSpread,bmSpread,bmSpread,bmSpread);  
+
+
+			   gl_FragColor	    = 	(((texSample - vingette) - backMask) +  guides  );
+
+               // gl_FragColor       =   vec4(1.0,1.0,0.0,1.0);
+		    	
+
+
+			  }
+
+		</script>
+
+
+		<script>
+
+
+            initWindow();
+
+			//3d setup
+	
+				var tEquiTex 			     	=		 new THREE.Texture(canvas,  function ( map ) {
+
+					customShaderMaterial.map 	= 		map;
+				    tEquiTex.wrapS 				= 		THREE.RepeatWrapping;
+					tEquiTex.wrapT 				= 		THREE.RepeatWrapping;
+					tEquiTex.generateMipmaps 	= 		false;
+					tEquiTex.minFilter  		= 		THREE.LinearFilter;
+
+				});
+
+
+				var tGuidesTex 				    =		 new THREE.TextureLoader().load("assets/img/guides.png",  function ( map ) {
+
+					map.anisotropy 				= 		8;
+					customShaderMaterial.map 	= 		map;
+				    tEquiTex.wrapS 				= 		THREE.RepeatWrapping;
+					tEquiTex.wrapT 				= 		THREE.RepeatWrapping;
+					tEquiTex.generateMipmaps 	= 		false;
+					tEquiTex.minFilter  		= 		THREE.LinearFilter;
+
+				});
+
+
+			
+				var uniforms 				= {
+					     						tEqui: {type: "t", value: tEquiTex },
+					     						tGuides: {type: "t", value: tGuidesTex},
+					     						u_FOV: {type:"f", value: v_FOV },
+					     						u_Roll: {type:"f", value: v_Roll },
+					     						u_phi1:    {type:"f", value: v_Tilt},
+					     						u_lambda0: {type:"f", value: v_Roll },
+					     						u_GuideOpacity:  {type:"f", value: v_Guide_Opacity },
+					     						u_bmStrength: {type:"f", value: v_Back_Dimming_Strength },
+					     						u_bmSpread:  {type:"f", value: v_Back_Dimming_Coverage },
+					     						u_Repetitions : {type:"f", value: v_Repetitions },
+					     						u_GuideOn 	  : {type:"f", v_Guide_On}
+					     						
+											};
+
+
+				
+
+				 var customShaderMaterial	= 		new THREE.ShaderMaterial( {
+
+				        uniforms:       uniforms,
+				        vertexShader:   document.getElementById( 'vertexShader' ).textContent,
+				        fragmentShader: document.getElementById( 'fragmentShader' ).textContent
+
+				 });
+
+
+            
+				 var geometry = new THREE.PlaneBufferGeometry(  g_domiantDimension,  g_domiantDimension);
+				 var material = new THREE.MeshBasicMaterial( { color: 0xff0000 } );
+				 var cube = new THREE.Mesh( geometry,  customShaderMaterial );
+				
+
+
+
+
+				g_scene 			 		     = 		new THREE.Scene();
+
+				
+
+				g_scene.add( cube );
+
+				document.getElementById('playerContent').appendChild( g_renderer.domElement );
+
+
+				g_camera.position.z = 50;
+
+
+		       window.addEventListener( 'resize', initWindow, false);
+
+
+
+
+			function loadTexture(path){
+
+				var texture = new THREE.TextureLoader().load(path);
+				texture.wrapS = THREE.RepeatWrapping;
+				texture.wrapT = THREE.RepeatWrapping;
+				texture.repeat.set( 4, 4 );
+
+				return texture
+
+			};
+
+			function initWindow(){
+
+                console.log('initWindow')
+				g_windowWidth 		= 	window.innerWidth-4.0;
+				g_windowHeight 	 	= 	window.innerHeight-4.0;
+				var aspectRatio	    =   g_windowHeight/g_windowWidth;
+				g_domiantDimension  = 	Math.min(g_windowHeight, g_windowWidth);
+				if(g_windowWidth<g_windowHeight){
+
+				    if (!g_camera){
+
+
+				        g_camera 			= 	new THREE.OrthographicCamera( (-g_windowWidth/2), (g_windowWidth/2), ( g_windowHeight/2 )/ aspectRatio, (-g_windowHeight/2 )/aspectRatio, 1, 1000 );
+				    };
+
+				}else{
+
+				    if (!g_camera){
+
+
+				        g_camera 			= 	new THREE.OrthographicCamera( (-g_windowWidth/2) * aspectRatio, (g_windowWidth/2) * aspectRatio, ( g_windowHeight/2 ), (-g_windowHeight/2 ), 1, 1000 );
+				    };
+
+
+				} 
+	
+
+			
+			/*	if (!g_renderPlaneGeo){
+					g_renderPlaneGeo 	=   new THREE.PlaneBufferGeometry( g_domiantDimension-1.0, g_domiantDimension-1.0, 2048, 2048);
+				};
+				if (!g_renderPlane ){
+					g_renderPlane 		=   new THREE.Mesh( g_renderPlaneGeo, customShaderMaterial );
+				};*/
+
+				if(!g_renderer){
+					 g_renderer         =   new THREE.WebGLRenderer();;
+				};
+			  if(g_constrainAspectRatio){
+
+			  	   console.log('constrain')
+
+			  	   g_camera.left = 10000;
+			  	
+				    g_renderer.setSize( g_domiantDimension  , g_domiantDimension  );
+				    document.getElementById('playerContent').style.margin = (g_windowHeight - g_domiantDimension)/2 + 'px 0 0 ' + (g_windowWidth - g_domiantDimension)/2 + 'px' 
+
+			
+
+				}else{
+
+					   console.log('dont constrain')
+
+					  g_renderer.setSize( g_windowWidth, g_windowHeight);
+					  document.getElementById('playerContent').style.margin = '0 0 0 0';
+				}
+
+		
+
+			   
+
+			 };
+
+		</script>
+		<script>
+		  function render() {
+
+				stats.begin()
+
+				if(g_typeLoaded == 'video'){
+	   
+					drawVideoFrameInCanvas(v,context);
+					transmit(['v_Video_Progess', videoInfo.get()/(v.duration*(30/100))]);
+				
+				} else if(g_typeLoaded == 'image'){
+
+					drawImageFrameInCanvas(g_img,context);
+
+				}
+							
+
+
+				tEquiTex.needsUpdate = true;
+			
+				uniforms.u_FOV.value           = v_FOV;
+				uniforms.u_phi1.value          = v_Tilt;
+				uniforms.u_lambda0.value       = v_Roll;
+				uniforms.u_Repetitions.value   = v_Repetitions;
+				uniforms.u_GuideOn.value       = v_Guide_On;
+				uniforms.u_GuideOpacity.value  = v_Guide_Opacity;
+				uniforms.u_bmSpread.value      = v_Back_Dimming_Coverage;
+				uniforms.u_bmStrength.value    = v_Back_Dimming_Strength;
+
+				
+
+				stats.end();
+
+		
+
+
+				requestAnimationFrame( render );
+				g_renderer.render( g_scene , g_camera );
+
+
+			}
+			render();
+
+		</script>
+	</body>
+</html>
